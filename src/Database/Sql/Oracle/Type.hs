@@ -21,20 +21,20 @@ dialectProxy = Proxy
 
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/index.html
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/index.html
-data OracleProcedureStatement r a
+data OracleStatement r a
   = OracleCreateTableStmt (CreateTable a)
   | OracleSelectStmt (Select a)
   | OracleUpdateStmt (Update a)
   | OracleDeleteStmt (Delete a)
   | OracleCreateProcedureStmt (CreateProcedure a)
 
-deriving instance (ConstrainSNames Data r a, Data r) => Data (OracleProcedureStatement r a)
-deriving instance Generic (OracleProcedureStatement r a)
-deriving instance ConstrainSNames Eq r a => Eq (OracleProcedureStatement r a)
-deriving instance ConstrainSNames Show r a => Show (OracleProcedureStatement r a)
-deriving instance ConstrainSASNames Functor r => Functor (OracleProcedureStatement r)
-deriving instance ConstrainSASNames Foldable r => Foldable (OracleProcedureStatement r)
-deriving instance ConstrainSASNames Traversable r => Traversable (OracleProcedureStatement r)
+deriving instance (ConstrainSNames Data r a, Data r) => Data (OracleStatement r a)
+deriving instance Generic (OracleStatement r a)
+deriving instance ConstrainSNames Eq r a => Eq (OracleStatement r a)
+deriving instance ConstrainSNames Show r a => Show (OracleStatement r a)
+deriving instance ConstrainSASNames Functor r => Functor (OracleStatement r)
+deriving instance ConstrainSASNames Foldable r => Foldable (OracleStatement r)
+deriving instance ConstrainSASNames Traversable r => Traversable (OracleStatement r)
   
 
 data CreateTable a = CreateTable a
@@ -79,11 +79,179 @@ data ParameterBody a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/lnpls/datatype-attribute.html
-data DataType a = DataType a 
+data DataType a
+  = DataTypeColection (CollectionType a)
+  | DataTypeObject (ObjectType a)
+  | DataTypeRecord (RecordType a)
+  | DataTypeCursor (CursorType a)
+  | DataTypeRow (RowType a)
+  | DataTypeScalar (ScalarType a)
+  | DataTypeAttribute (TypeAttribute a)
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data CollectionType a = CollectionType a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data ObjectType a = ObjectType a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data RecordType a = RecordType a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data CursorType a = CursorType a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data RowType a = RowType a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+-- https://docs.oracle.com/en/database/oracle/oracle-database/19/lnpls/plsql-data-types.html
+data ScalarType a
+  = ScalarSqlT (SqlType a)
+  | ScalarBoolean a
+  | ScalarPlsInteger a
+  | ScalarBinaryInteger a
+  | ScalarSimpleInteger a
+  | ScalarUDT a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data TypeAttribute a = TypeAttribute a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+-- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Data-Types.html
+data SqlType a
+  = OracleBuiltInT (OracleBuiltInType a)
+  | AnsiSqlT (AnsiSqlType a)
+  | SqlUdt a
+  | OracleSuppliedType a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data OracleBuiltInType a
+  = OracleCharacterT (OracleCharacterType a)
+  | OracleNumberT (OracleNumberType a)
+  | OracleLongRawT (OracleLongRawType a)
+  | OracleDataTimeT (OracleDateTimeType a)
+  | OracleLargeObjectT (OracleLargeObjectType a)
+  | OracleRowIdT (OracleRowIdType a)
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data OracleCharacterType a
+  = OracleChar
+    {
+    }
+  | OracleVarchar2
+    {
+    }
+  | OracleNChar
+    {
+    }
+  | OracleNVarchar2
+    {
+    }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+
+data OracleNumberType a
+  = OracleNumber
+    {
+    }
+  | OracleFloat
+    {
+    }
+  | OracleBinaryFloat
+    {
+    }
+  | OracleBinaryDouble
+    {
+    }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data OracleLongType a
+  = OracleLongType a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data OracleLongRawType a
+  = OracleLong
+    {
+    }
+  | OracleLongRaw
+    {
+    }
+  | OracleRaw
+    {
+    }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data OracleDateTimeType a
+  = OracleDate
+    {
+    }
+  | OracleTimestamp
+    {
+    }
+  | OracleIntervalY2M
+    {
+    }
+  | OracleIntervalD2S
+    {
+    }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data OracleLargeObjectType a
+  = OracleBLob
+  | OracleCLob
+  | OracleNCLob
+  | OracleBFile
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data OracleRowIdType a
+  = OracleRowId
+  | OracleURowId
+    {
+    }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+
+data AnsiSqlType a
+  = AnsiCharacterType
+    {
+    }
+  | AnsiChar
+    {
+    }
+  | AnsiVarchar
+    {
+    }
+  | AnsiNational
+    {
+    }
+  | AnsiNumeric
+    {
+    }
+  | AnsiInteger
+    {
+    }
+  | AnsiFloat
+    {
+    }
+  | AnsiDouble
+    {
+    }
+  | AnsiReal
+    {
+    }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)  
+
+
+-- /---------------
+-- | procedure body
+-- \---------------
 
 data CreateProcedureBody a = CreateProcedureBody a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+-- /---------------
+-- | type extension
+-- \---------------
 
 -- Database.Sql.Type.Names
 data QProcedureName f a = QProcedureName
