@@ -14,12 +14,14 @@ import Data.Data (Data, Proxy(..), Typeable)
 
 import qualified Data.Text.Lazy as T
 
+import Data.These (These(..))
+
 data Oracle
 deriving instance Data Oracle
 dialectProxy :: Proxy Oracle
 dialectProxy = Proxy
 
--- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/index.html
+-- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/SQL-Statements.html
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/index.html
 data OracleStatement r a
   = OracleCreateTableStmt (CreateTable a)
@@ -54,14 +56,14 @@ data Delete a = Delete a
 data CreateProcedure a = CreateProcedure
   { createProcedureOrReplace :: Bool
   , createProcedureName :: QProcedureName Maybe a
-  , createProcedureParams :: [ParameterDeclaration a]
+  , createProcedureParams :: [ProcedureParameter a]
   , createProcedureBody :: CreateProcedureBody a
   }
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data ParameterDeclaration a = ParameterDeclaration
-  { parameterDeclarationName :: T.Text
-  , parameterDeclarationBody :: Maybe (ParameterBody a)
+data ProcedureParameter a = ProcedureParameter
+  { procedureParameterName :: T.Text
+  , procedureParameterBody :: Maybe (ParameterBody a)
   }
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
@@ -243,10 +245,79 @@ data AnsiSqlType a
 
 
 -- /---------------
+-- | create procedure body
+-- \---------------
+
+data CreateProcedureBody a
+  = ProcedureNative
+    { procedureDeclare :: Maybe (ProcedureDeclare a)
+    , procedureBody :: ProcedureBody a
+    }
+  | ProcedureForeign a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+-- /---------------
+-- | procedure declare
+-- \---------------
+
+-- https://docs.oracle.com/en/database/oracle/oracle-database/19/lnpls/block.html
+data ProcedureDeclare a
+  = These [ProcedureDeclareItem1 a] [ProcedureDeclareItem2 a]
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data ProcedureDeclareItem1 a
+  = Item1TypeDefinition (TypeDefinition a)
+  | Item1CusorDeclaration a
+  | Item1ItemDeclaration (ItemDeclaration a)
+  | Item1FunctionDeclaration a
+  | Item1ProcedureDeclaration a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data TypeDefinition a = TypeDefinition a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data ItemDeclaration a
+  = ItemCollectionVariable a
+  | ItemConstant a
+  | ItemCusorVariable a
+  | ItemException a
+  | ItemRecordVariable a
+  | ItemVariable (VariableDeclaration a)
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data VariableDeclaration a = VariableDeclaration
+  { variableName :: T.Text
+  , variableType :: (DataType a)
+  , variableNullable :: Bool
+  , variableExpression :: Maybe T.Text
+  }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data ProcedureDeclareItem2 a
+  = Item2CursorDeclaration a
+  | Item2CursorDefinition a
+  | Item2FunctionDeclaration a
+  | Item2FunctionDefinition a
+  | Item2ProcedureDeclaration a
+  | Item2ProcedureDefinition a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+-- /---------------
 -- | procedure body
 -- \---------------
 
-data CreateProcedureBody a = CreateProcedureBody a
+data ProcedureBody a
+  = ProcedureBody
+  { procedureBodyStmts :: [ Statement a ]
+  , procedureBodyExceptionHandlers :: [  ExceptionHandler a ]
+  , procedureBodyName :: Maybe T.Text
+  }
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data Statement a = Statement a
+  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
+
+data ExceptionHandler a = ExceptionHandler a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 -- /---------------
