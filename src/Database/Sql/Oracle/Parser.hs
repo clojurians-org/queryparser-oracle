@@ -30,4 +30,6 @@ statementParser = P.choice
 parse :: T.Text -> Either P.ParseError (OracleProcedureStatement RawNames Range)
 parse = flip runReader emptyParserScope . P.runParserT statementParser 0 "-" . tokenize
 
+parseManyAll :: T.Text -> Either P.ParseError [OracleProcedureStatement RawNames Range]
+parseManyAll text = runReader (P.runParserT (P.many1 statementParser <* P.eof) 0 "-"  . tokenize $ text) emptyParserScope
 

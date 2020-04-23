@@ -33,6 +33,7 @@ library
                      , string-conversions
                      , containers
                      , mtl
+                     , these
                      , parsec
                      , queryparser
   hs-source-dirs:      src
