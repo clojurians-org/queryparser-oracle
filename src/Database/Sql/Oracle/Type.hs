@@ -24,13 +24,11 @@ dialectProxy = Proxy
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlqr/SQL-Statements.html
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/index.html
 data OracleStatement r a
-  = OracleCreateProcedureStmt (CreateProcedure a)
-  | OracleCreateTableStmt (CreateTable a)
-  | OracleDeleteStmt (Delete a)
-  | OracleInsertStmt (InsertStatement a)
+  = OracleCreateTableStmt (CreateTable a)
   | OracleSelectStmt (Select a)
   | OracleUpdateStmt (Update a)
-
+  | OracleDeleteStmt (Delete a)
+  | OracleCreateProcedureStmt (CreateProcedure a)
 
 deriving instance (ConstrainSNames Data r a, Data r) => Data (OracleStatement r a)
 deriving instance Generic (OracleStatement r a)
@@ -169,7 +167,7 @@ data ProcedureStatementItem a
   | BasicLoopStatement a
   | CaseStatement a
   | CloseStatement a
-  | ProcedureCollectionMethodCall (CollectionMethodCall a)
+  | CollectionMethodCall a
   | ContinueStatement a
   | CursorForLoopStatement a
   | ProcedureExecuteImmediateStmt (ExecuteImmediateStatement a)
@@ -188,7 +186,7 @@ data ProcedureStatementItem a
   | RaiseStatement a
   | ReturnStatement a
   | SelectIntoStatement a
-  | SqlStmt (SqlStatement a)
+  | SqlStatement a
   | WhileLoopStatement a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
@@ -248,133 +246,6 @@ data IfStatement a = IfStatement
   , elseStatements :: [ProcedureStatement a]
   }
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data SqlStatement a
-  = CommitStatement a
-  | SqlCollectionMethoCall (CollectionMethodCall a)
-  | DeleteStatement a
-  | SqlInsertStmt (InsertStatement a)
-  | LockTableStatement a
-  | MergeStatement a
-  | RollbackStatement a
-  | SavepointStatement a
-  | SetTransactionStatement a
-  | UpdateStatement a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data CollectionMethodCall a = CollectionMethodCall a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
--- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/INSERT.html
-data InsertStatement a = InsertStatement
-  { insertStatementHint :: Maybe T.Text
-  , insertStatementUnion :: InsertUnion a
-  }
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data InsertUnion a
-  = InsertSingle (SingleTableInsert a)
-  | InsertMulti (MultiTableInsert a)
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data SingleTableInsert a = SingleTableInsert
-  { singleInsertTarget :: InsertIntoClause a
-  , singleInsertBody :: SingleInsertUnion a
-  , singleInsertErrorLog :: Maybe (ErrorLoggingClause a)
-  }
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data SingleInsertUnion a
-  = SingleValues
-    { singleValuesClause :: ValuesClause a
-    , singleReturningClause :: Maybe (ReturningClause a)
-    }
-  | SingleSubQuery (Subquery a)
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data MultiTableInsert a = MultiTableInsert
-  { multiInsertTarget :: MultiInsertTarget a
-  , multiInsertBody :: Subquery a
-  }
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data MultiInsertTarget a
-  = MultiAll {
-      multiAllInsert :: [MultiInsertSingle a]      
-    }
-  | MultiConditonal {
-      multiConditionalFlag :: T.Text
-    , multiConditionalWhens :: [(BooleanExpression a, MultiInsertSingle a)]
-    , multiConditionalElse :: Maybe (MultiInsertSingle a)
-    }
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data MultiInsertSingle a = MultiInsertSingle
-  { multiInsertSingleTarget :: InsertIntoClause a
-  , multiInsertValues :: Maybe (ValuesClause a)
-  , multiInsertErrorLog :: Maybe (ErrorLoggingClause a)
-  }
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data InsertIntoClause a = InsertIntoClause
-  { insertDmlTable :: [DteClause a]
-  , insertAlias :: Maybe T.Text
-  , insertColumns :: [T.Text]
-  }
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data Subquery a = Subquery a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data SubqueryRestrictionClause a = SubqueryRestrictionClause a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data ValuesClause a = ValuesClause a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data ReturningClause a = ReturningClause a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data DteClause a
-  = DteSchemaT (DteSchema a)
-  | DteSubQuery
-    { dteSubQuery :: Subquery a
-    , dteSubQueryRestriction :: Maybe (SubqueryRestrictionClause a)
-    }
-  | DteCollectionExpression
-    { dteCollectionExpression :: T.Text
-    } 
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data DteSchema a
-  = DteTablePartition
-    { dteTable :: T.Text
-    , dteTablePartition :: [PartitionExtensionClause a]
-    }
-  | DteTable
-    { dteTable :: T.Text
-    , dteTableDblink :: [Dblink a]
-    }
-  | DteView
-    { dteView :: T.Text
-    , dteViewDblink :: [Dblink a]
-    }
-  | DteMView
-    { dteMView :: T.Text
-    , dteMViewDblink :: [Dblink a]
-    }
-    
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data Dblink a = Dblink a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data PartitionExtensionClause a = PartitionExtensionClause a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
-data ErrorLoggingClause a = ErrorLoggingClause a
-  deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-
 
 data ExceptionHandler a = ExceptionHandler a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)

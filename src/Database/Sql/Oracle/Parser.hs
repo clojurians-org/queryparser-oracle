@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 module Database.Sql.Oracle.Parser where
 
 import Database.Sql.Position
@@ -9,9 +8,7 @@ import Database.Sql.Type
 
 import Database.Sql.Oracle.Scanner (tokenize)
 import Database.Sql.Oracle.Parser.Internal (Parser, ParserScope(..), selectTableAliases)
-import Database.Sql.Oracle.Type
---  ( OracleStatement(..)
---  , InsertStatement(..))
+import Database.Sql.Oracle.Type (OracleProcedureStatement)
 
 
 import qualified Data.Text.Lazy as T
@@ -20,42 +17,19 @@ import Control.Monad.Reader (Reader, runReader)
 
 import qualified Text.Parsec as P
 import qualified Text.Parsec.Pos as P
-import qualified Database.Sql.Oracle.Parser.Token as Tok
 
 
 emptyParserScope :: ParserScope
 emptyParserScope = ParserScope { selectTableAliases = Nothing }
 
-
-parse :: T.Text -> Either P.ParseError (OracleStatement RawNames Range)
-parse = flip runReader emptyParserScope . P.runParserT statementParser 0 "-" . tokenize
-
-parseManyAll :: T.Text -> Either P.ParseError [OracleStatement RawNames Range]
-parseManyAll text = runReader (P.runParserT (P.many1 statementParser <* P.eof) 0 "-"  . tokenize $ text) emptyParserScope
-
-
-statementParser :: Parser (OracleStatement RawNames Range)
+statementParser :: Parser (OracleProcedureStatement RawNames Range)
 statementParser = P.choice
-  [ P.try $ OracleInsertStmt <$> insertStatementP
+  [ undefined
   ]
 
-insertStatementP :: Parser (InsertStatement Range)
-insertStatementP = do
-  _ <- Tok.insertP
-  insertStatementHint <- return Nothing
-  insertStatementUnion <- P.choice
-    [ InsertSingle <$> insertSingleP
-    , InsertMulti <$> insertMultiP
-    ]
-  return $ InsertStatement {..}
+parse :: T.Text -> Either P.ParseError (OracleProcedureStatement RawNames Range)
+parse = flip runReader emptyParserScope . P.runParserT statementParser 0 "-" . tokenize
 
-insertSingleP :: Parser (SingleTableInsert Range)
-insertSingleP = do
-  undefined
+parseManyAll :: T.Text -> Either P.ParseError [OracleProcedureStatement RawNames Range]
+parseManyAll text = runReader (P.runParserT (P.many1 statementParser <* P.eof) 0 "-"  . tokenize $ text) emptyParserScope
 
-insertIntoClauseP :: Parser (InsertIntoClause Range)
-insertIntoClauseP = do
-  undefined
-
-insertMultiP :: Parser (MultiTableInsert Range)
-insertMultiP = undefined
