@@ -6,7 +6,7 @@
 module Database.Sql.Oracle.Type where
 
 import Database.Sql.Type
-  ( RawNames(..), QSchemaName(..), ConstrainSNames(..), ConstrainSASNames(..)
+  ( RawNames(..), QSchemaName(..), QTableName(..), ConstrainSNames(..), ConstrainSASNames(..)
   , mkNormalSchema)
 
 import GHC.Generics (Generic)
@@ -41,16 +41,16 @@ deriving instance ConstrainSASNames Foldable r => Foldable (OracleStatement r)
 deriving instance ConstrainSASNames Traversable r => Traversable (OracleStatement r)
   
 
-data CreateTable a = CreateTable a
+newtype CreateTable a = CreateTable a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data Select a = Select a
+newtype Select a = Select a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data Update a = Update a
+newtype Update a = Update a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data Delete a = Delete a
+newtype Delete a = Delete a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 
@@ -114,7 +114,7 @@ data ProcedureDeclareItem1 a
   | Item1ProcedureDeclaration a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data TypeDefinition a = TypeDefinition a
+newtype TypeDefinition a = TypeDefinition a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 data ItemDeclaration a
@@ -128,7 +128,7 @@ data ItemDeclaration a
 
 data VariableDeclaration a = VariableDeclaration
   { variableName :: T.Text
-  , variableType :: (DataType a)
+  , variableType :: DataType a
   , variableNullable :: Bool
   , variableExpression :: Maybe (Expression a)
   }
@@ -203,7 +203,7 @@ data DynamicSqlStatement a
   | DynamicSqlStringVariable T.Text
   | DynamicSqlStringExpression (Expression a)
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
-data ExecuteImmediateClause a = ExecuteImmediateClause a
+newtype ExecuteImmediateClause a = ExecuteImmediateClause a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/lnpls/assignment-statement.html
@@ -262,7 +262,7 @@ data SqlStatement a
   | UpdateStatement a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data CollectionMethodCall a = CollectionMethodCall a
+newtype CollectionMethodCall a = CollectionMethodCall a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/INSERT.html
@@ -317,22 +317,22 @@ data MultiInsertSingle a = MultiInsertSingle
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 data InsertIntoClause a = InsertIntoClause
-  { insertDmlTable :: [DteClause a]
+  { insertDmlTable :: DteClause a
   , insertAlias :: Maybe T.Text
   , insertColumns :: [T.Text]
   }
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data Subquery a = Subquery a
+newtype Subquery a = Subquery a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data SubqueryRestrictionClause a = SubqueryRestrictionClause a
+newtype SubqueryRestrictionClause a = SubqueryRestrictionClause a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data ValuesClause a = ValuesClause a
+newtype ValuesClause a = ValuesClause a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data ReturningClause a = ReturningClause a
+newtype ReturningClause a = ReturningClause a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 data DteClause a
@@ -348,35 +348,34 @@ data DteClause a
 
 data DteSchema a
   = DteTablePartition
-    { dteTable :: T.Text
-    , dteTablePartition :: [PartitionExtensionClause a]
+    { dteTableP :: QTableName Maybe a
+    , dteTablePartition :: PartitionExtensionClause a
     }
   | DteTable
-    { dteTable :: T.Text
-    , dteTableDblink :: [Dblink a]
+    { dteTable :: QTableName Maybe a
+    , dteTableDblink :: Maybe (Dblink a)
     }
   | DteView
     { dteView :: T.Text
-    , dteViewDblink :: [Dblink a]
+    , dteViewDblink :: Maybe (Dblink a)
     }
   | DteMView
     { dteMView :: T.Text
-    , dteMViewDblink :: [Dblink a]
+    , dteMViewDblink :: Maybe (Dblink a)
     }
-    
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data Dblink a = Dblink a
+newtype Dblink a = Dblink a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data PartitionExtensionClause a = PartitionExtensionClause a
+newtype PartitionExtensionClause a = PartitionExtensionClause a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data ErrorLoggingClause a = ErrorLoggingClause a
+newtype ErrorLoggingClause a = ErrorLoggingClause a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 
-data ExceptionHandler a = ExceptionHandler a
+newtype ExceptionHandler a = ExceptionHandler a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 
@@ -395,19 +394,19 @@ data DataType a
   | DataTypeAttribute (TypeAttribute a)
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data CollectionType a = CollectionType a
+newtype CollectionType a = CollectionType a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data ObjectType a = ObjectType a
+newtype ObjectType a = ObjectType a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data RecordType a = RecordType a
+newtype RecordType a = RecordType a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data CursorType a = CursorType a
+newtype CursorType a = CursorType a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data RowType a = RowType a
+newtype RowType a = RowType a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/lnpls/plsql-data-types.html
@@ -420,7 +419,7 @@ data ScalarType a
   | ScalarUDT a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data TypeAttribute a = TypeAttribute a
+newtype TypeAttribute a = TypeAttribute a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 -- https://docs.oracle.com/en/database/oracle/oracle-database/19/sqlrf/Data-Types.html
@@ -471,7 +470,7 @@ data OracleNumberType a
     }
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data OracleLongType a
+newtype OracleLongType a
   = OracleLongType a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
@@ -602,7 +601,7 @@ data ExpressionPredicate a
     }
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
-data CursorPredicate a = CursorPredicate a
+newtype CursorPredicate a = CursorPredicate a
   deriving (Generic, Data, Eq, Show, Functor, Foldable, Traversable)
 
 

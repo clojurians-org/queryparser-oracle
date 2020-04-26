@@ -34,3 +34,6 @@ keywordP keyword = P.tokenPrim showTok posFromTok testTok
 
 insertP :: Parser Range
 insertP = keywordP "insert"
+
+intoP :: Parser Range
+intoP = keywordP "into"

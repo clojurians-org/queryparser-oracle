@@ -4,7 +4,7 @@ module Database.Sql.Oracle.Parser where
 import Database.Sql.Position
   (Position(..), Range(..), advance, advanceHorizontal, advanceVertical)
 import Database.Sql.Type
-  ( RawNames(..), QSchemaName(..), ConstrainSNames(..)
+  ( RawNames(..), QSchemaName(..), QTableName(..), ConstrainSNames(..)
   , mkNormalSchema)
 
 import Database.Sql.Oracle.Scanner (tokenize)
@@ -42,7 +42,7 @@ statementParser = P.choice
 insertStatementP :: Parser (InsertStatement Range)
 insertStatementP = do
   _ <- Tok.insertP
-  insertStatementHint <- return Nothing
+  let insertStatementHint = Nothing
   insertStatementUnion <- P.choice
     [ InsertSingle <$> insertSingleP
     , InsertMulti <$> insertMultiP
@@ -55,6 +55,21 @@ insertSingleP = do
 
 insertIntoClauseP :: Parser (InsertIntoClause Range)
 insertIntoClauseP = do
+  _ <- Tok.insertP
+  undefined
+
+dteClauseP :: Parser (DteClause Range)
+dteClauseP = P.choice
+  [ DteSchemaT <$> dteSchemaP
+  ]
+
+dteSchemaP :: Parser (DteSchema Range)
+dteSchemaP = P.choice
+  [ flip DteTable Nothing <$>  tableNameP
+  ]
+
+tableNameP :: Parser (QTableName Maybe a)
+tableNameP = do
   undefined
 
 insertMultiP :: Parser (MultiTableInsert Range)
