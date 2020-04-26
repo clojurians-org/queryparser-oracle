@@ -21,6 +21,10 @@ library
   exposed-modules:     MyLib
                      , Database.Sql.Oracle.Scanner
                      , Database.Sql.Oracle.Token
+                     , Database.Sql.Oracle.Parser.Token
+                     , Database.Sql.Oracle.Parser.Internal
+                     , Database.Sql.Oracle.Parser
+                     , Database.Sql.Oracle.Type
   -- other-modules:
   -- other-extensions:
   build-depends:       base
@@ -29,6 +33,7 @@ library
                      , string-conversions
                      , containers
                      , mtl
+                     , these
                      , parsec
                      , queryparser
   hs-source-dirs:      src

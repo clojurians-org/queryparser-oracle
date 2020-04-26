@@ -1,0 +1,356 @@
+INSERT INTO  DTAP_XYHF_DATAPARAMETER_HOUR
+             (TIME_LEVEL,
+			  BIZ_LEVEL,
+			  DATA_PERIOD,
+			  ID,
+			  NAME,
+			  TXNS,
+			  AMTS ,
+			  BONUS_FEE,
+			  CASH_FEE ,
+			  CLIENTS ,
+			  NEW_CLIENTS ,
+			  USERS,
+			  NEW_USERS ,
+			  RETAIN_USERS ,
+			  ACTIVE_USERS ,
+			  LOSING_USERS,
+			  BONUS_TXNS 
+			 )
+SELECT HOUR_TMP.TIME_LEVEL,
+       HOUR_TMP.BIZ_LEVEL,
+       HOUR_TMP.DATA_PERIOD,
+       BUSINESS.BUSINESS_ID,
+       BUSINESS.TITLE,
+       NVL(HOUR_TMP.TXNS, 0::BIGINT) AS TXNS,
+       NVL(HOUR_TMP.AMTS, 0.0) AS AMTS,
+       NVL(HOUR_TMP.BONUS_FEE, 0.0) AS BONUS_FEE,
+       NVL(HOUR_TMP.CASH_FEE, 0.0) AS CASH_FEE,
+       NVL(NULL, 0),
+       NVL(NULL, 0),
+       NVL(NULL, 0),
+       NVL(NULL, 0),
+       NVL(NULL, 0),
+       NVL(NULL, 0),
+       NVL(NULL, 0),
+       NVL(HOUR_TMP.BONUS_TXNS, 0::BIGINT)
+  FROM (SELECT DEAL.mchnt_no,
+               %(time_level)s AS TIME_LEVEL,
+               %(biz_level)s AS BIZ_LEVEL,
+               TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone AS DATA_PERIOD,
+               COUNT(DEAL.pay_log_id) AS TXNS,
+               SUM(DEAL.TOTAL_FEE) AS AMTS,
+               SUM(DEAL.BONUS_FEE) AS BONUS_FEE,
+               SUM(DEAL.CASH_FEE) AS CASH_FEE,
+               SUM(CASE
+                     WHEN BONUS_FEE > 0 THEN     1
+                     ELSE  0
+                   END) AS BONUS_TXNS
+          FROM DTAP_XYHF_COOLDEAL DEAL
+         WHERE DEAL.REGTIME < (TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone + INTERVAL '1 hour')     --加1小时修改为gp支持的格式20190612
+           AND DEAL.REGTIME >= TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone
+           AND PAY_STAT = '0'
+         GROUP BY DEAL.mchnt_no) HOUR_TMP
+  LEFT JOIN (select business_id,title,mch_code from XYHF_MIR_COOLBUSINESS WHERE STATUS IN (3, 4) AND IS_STATUS='1') BUSINESS
+    ON HOUR_TMP.mchnt_no = BUSINESS.MCH_CODE;
+	
+
+INSERT INTO  DTAP_XYHF_DATAPARAMETER_HOUR
+             (TIME_LEVEL,
+			  BIZ_LEVEL,
+			  DATA_PERIOD,
+			  ID,
+			  NAME,
+			  TXNS,
+			  AMTS ,
+			  BONUS_FEE,
+			  CASH_FEE ,
+			  CLIENTS ,
+			  NEW_CLIENTS ,
+			  USERS,
+			  NEW_USERS ,
+			  RETAIN_USERS ,
+			  ACTIVE_USERS ,
+			  LOSING_USERS,
+			  BONUS_TXNS 
+			 )
+SELECT %(time_level)s AS TIME_LEVEL,
+       %(biz_level)s AS BIZ_LEVEL,
+       TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone AS DATA_PERIOD,
+       BUSINESS.AGENT_ID AS ID,
+       AGENTS.AGENT_NAME AS NAME,
+       NVL(SUM(DTAP_XYHF_DATAPARAMETER.TXNS), 0::BIGINT) AS TXNS,
+       NVL(SUM(DTAP_XYHF_DATAPARAMETER.AMTS), 0.0) AS AMTS,
+       NVL(SUM(DTAP_XYHF_DATAPARAMETER.BONUS_FEE), 0.0) AS BONUS_FEE,
+       NVL(SUM(DTAP_XYHF_DATAPARAMETER.CASH_FEE), 0.0) AS CASH_FEE,
+       NVL(NULL, 0) AS CLIENTS,
+       NVL(NULL, 0) AS NEW_CLIENTS,
+       NVL(COUNT(USERS_TABLE.BUSINESS_ID), 0::BIGINT) AS USERS,
+       NVL(NULL, 0) AS NEW_USERS,
+       NVL(COUNT(TMP1.BUSINESS_ID), 0::BIGINT) AS RETAIN_USERS,
+       NVL(COUNT(TMP2.BUSINESS_ID), 0::BIGINT) AS ACTIVE_USERS,
+       NVL(COUNT(TMP3.BUSINESS_ID), 0::BIGINT) AS LOSING_USERS,
+       NVL(SUM(DTAP_XYHF_DATAPARAMETER.BONUS_TXNS),0::BIGINT) AS BONUS_TXNS
+  FROM (SELECT *
+          FROM DTAP_XYHF_DATAPARAMETER_HOUR
+         WHERE TIME_LEVEL = '1'
+           AND BIZ_LEVEL = '1'
+           AND DATA_PERIOD = TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone) DTAP_XYHF_DATAPARAMETER
+  LEFT JOIN (SELECT DISTINCT DEAL1.ID AS BUSINESS_ID
+               FROM DTAP_XYHF_DATAPARAMETER_HOUR DEAL1
+              WHERE DATA_PERIOD =
+                    TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone
+                AND DEAL1.TIME_LEVEL = '1'
+                AND DEAL1.BIZ_LEVEL = '1') USERS_TABLE
+    ON DTAP_XYHF_DATAPARAMETER.ID = USERS_TABLE.BUSINESS_ID
+  LEFT JOIN (SELECT ID AS BUSINESS_ID
+               FROM DTAP_XYHF_DATAPARAMETER_HOUR XYHF1
+              WHERE EXISTS
+              (SELECT DISTINCT ID
+                       FROM DTAP_XYHF_DATAPARAMETER_HOUR XYHF2
+                      WHERE XYHF2.DATA_PERIOD =
+                            (TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone -
+                            INTERVAL '1 hour')
+                        AND XYHF2.ID = XYHF1.ID)
+                AND XYHF1.TIME_LEVEL = '1'
+                AND XYHF1.BIZ_LEVEL = '1'
+                AND XYHF1.DATA_PERIOD =
+                    TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone) TMP1
+    ON DTAP_XYHF_DATAPARAMETER.ID = TMP1.BUSINESS_ID
+  LEFT JOIN (SELECT ID AS BUSINESS_ID
+               FROM ((SELECT DISTINCT ID
+                        FROM DTAP_XYHF_DATAPARAMETER_HOUR DEAL
+                       WHERE DEAL.DATA_PERIOD =
+                             (TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone -
+                             INTERVAL '2 hour')
+                         AND DEAL.TIME_LEVEL = '1'
+                         AND DEAL.BIZ_LEVEL = '1') UNION ALL
+                     (SELECT DISTINCT ID
+                        FROM DTAP_XYHF_DATAPARAMETER_HOUR DEAL
+                       WHERE DEAL.DATA_PERIOD =
+                             (TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone -
+                             INTERVAL '1 hour')
+                         AND DEAL.TIME_LEVEL = '1'
+                         AND DEAL.BIZ_LEVEL = '1') UNION ALL
+                     (SELECT DISTINCT ID
+                        FROM DTAP_XYHF_DATAPARAMETER_HOUR DEAL
+                       WHERE DEAL.DATA_PERIOD =
+                             (TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone)
+                         AND DEAL.TIME_LEVEL = '1'
+                         AND DEAL.BIZ_LEVEL = '1')) DEAL3
+              GROUP BY ID
+             HAVING COUNT(ID) >= 3) TMP2
+    ON DTAP_XYHF_DATAPARAMETER.ID = TMP2.BUSINESS_ID
+  LEFT JOIN (SELECT DEAL2.ID AS BUSINESS_ID
+               FROM (SELECT ID, TXNS, AMTS
+                       FROM DTAP_XYHF_DATAPARAMETER_HOUR
+                      WHERE DATA_PERIOD =
+                            (TO_TIMESTAMP(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')::TIMESTAMP WITHOUT time zone -
+                            INTERVAL '1 hour')
+                        AND TIME_LEVEL = '1'
+                        AND BIZ_LEVEL = '1') DEAL2
+               LEFT JOIN DTAP_XYHF_DATAPARAMETER_HOUR XYHF3
+                 ON XYHF3.ID = DEAL2.ID
+              WHERE XYHF3.TXNS > 0
+                AND XYHF3.AMTS > 0
+                AND XYHF3.TIME_LEVEL = '1'
+                AND XYHF3.BIZ_LEVEL = '1'
+                AND DEAL2.TXNS::NUMERIC / XYHF3.TXNS::NUMERIC < 0.5
+                AND DEAL2.AMTS / XYHF3.AMTS < 0.5
+              GROUP BY DEAL2.ID) TMP3
+    ON DTAP_XYHF_DATAPARAMETER.ID = TMP3.BUSINESS_ID
+  LEFT JOIN XYHF_MIR_COOLBUSINESS BUSINESS
+    ON DTAP_XYHF_DATAPARAMETER.ID = TO_CHAR(BUSINESS.BUSINESS_ID,'fm9999999999')
+  LEFT JOIN XYHF_MIR_COOLAGENT AGENTS
+    ON BUSINESS.AGENT_ID = TO_CHAR(AGENTS.AGENT_ID,'fm9999999999')
+ GROUP BY BUSINESS.AGENT_ID, AGENTS.AGENT_NAME;
+
+
+
+INSERT INTO  DTAP_XYHF_DATAPARAMETER
+       (TIME_LEVEL,
+	    BIZ_LEVEL,
+		DATA_PERIOD,
+		ID,
+		NAME,
+		TXNS,
+		AMTS ,
+		BONUS_FEE,
+		CASH_FEE ,
+		CLIENTS ,
+		NEW_CLIENTS ,
+		USERS,
+		NEW_USERS ,
+		RETAIN_USERS ,
+		ACTIVE_USERS ,
+		LOSING_USERS,
+		BONUS_TXNS 
+	   )
+SELECT %(time_level)s AS TIME_LEVEL,
+       %(biz_level)s AS BIZ_LEVEL,
+       TO_DATE(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss') AS DATA_PERIOD,
+       ADDMESSAGE.AGENT_ID,
+       AGENTNAME.AGENT_NAME AS NAME,
+       NVL(COUNTMESSAGE.TXNS, 0::BIGINT),
+       NVL(COUNTMESSAGE.AMTS, 0.0),
+       NVL(COUNTMESSAGE.BONUS_FEE, 0.0),
+       NVL(COUNTMESSAGE.CASH_FEE, 0.0),
+       ADDMESSAGE.CLIENTS,
+       ADDMESSAGE.NEW_CLIENTS,
+       NVL(COUNTMESSAGE.USERS, 0::BIGINT),
+       NVL(COUNTMESSAGE.NEW_USERS, 0::BIGINT),
+       NVL(COUNTMESSAGE.RETAIN_USERS, 0::BIGINT),
+       NVL(COUNTMESSAGE.ACTIVE_USERS, 0::BIGINT),
+       NVL(COUNTMESSAGE.LOSING_USERS, 0::BIGINT),
+       NVL(COUNTMESSAGE.BONUS_TXNS, 0::BIGINT)
+  FROM (SELECT AGENTS.AGENT_ID AS ID,
+               SUM(DAY_BUSINESS.TXNS) AS TXNS,
+               SUM(DAY_BUSINESS.AMTS) AS AMTS,
+               SUM(DAY_BUSINESS.BONUS_FEE) AS BONUS_FEE,
+               SUM(DAY_BUSINESS.CASH_FEE) AS CASH_FEE,
+               COUNT(USERS_TABLE.BUSINESS_ID) AS USERS,
+               COUNT(USERS_ADDTABLE.BUSINESS_ID) AS NEW_USERS,
+               COUNT(TMP1.BUSINESS_ID) AS RETAIN_USERS,
+               COUNT(TMP2.BUSINESS_ID) AS ACTIVE_USERS,
+               COUNT(TMP3.BUSINESS_ID) AS LOSING_USERS,
+               SUM(DAY_BUSINESS.BONUS_TXNS) AS BONUS_TXNS
+          FROM (SELECT *
+                  FROM DTAP_XYHF_DATAPARAMETER
+                 WHERE TIME_LEVEL = '2'
+                   AND BIZ_LEVEL = '1'
+                   AND DATA_PERIOD =
+                       TO_DATE(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')) DAY_BUSINESS
+          LEFT JOIN (SELECT DISTINCT DEAL1.ID AS BUSINESS_ID
+                      FROM DTAP_XYHF_DATAPARAMETER DEAL1
+                     WHERE DATA_PERIOD =
+                           TO_DATE(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')
+                       AND NOT EXISTS (SELECT *
+                              FROM DTAP_XYHF_DATAPARAMETER DEAL2
+                             WHERE DATA_PERIOD <
+                                   TO_DATE(%(data_period)s,
+                                           'yyyy-mm-dd hh24:mi:ss')
+                               AND DEAL1.ID = DEAL2.ID
+                               AND DEAL2.TIME_LEVEL = '2'
+                               AND DEAL2.BIZ_LEVEL = '1')
+                       AND DEAL1.TIME_LEVEL = '2'
+                       AND DEAL1.BIZ_LEVEL = '1') USERS_ADDTABLE
+            ON DAY_BUSINESS.ID = USERS_ADDTABLE.BUSINESS_ID
+          LEFT JOIN (SELECT DISTINCT DEAL1.ID AS BUSINESS_ID
+                      FROM DTAP_XYHF_DATAPARAMETER DEAL1
+                     WHERE DATA_PERIOD =
+                           TO_DATE(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')
+                       AND DEAL1.TIME_LEVEL = '2'
+                       AND DEAL1.BIZ_LEVEL = '1') USERS_TABLE
+            ON DAY_BUSINESS.ID = USERS_TABLE.BUSINESS_ID
+          LEFT JOIN (SELECT ID AS BUSINESS_ID
+                      FROM DTAP_XYHF_DATAPARAMETER XYHF1
+                     WHERE EXISTS
+                     (SELECT DISTINCT ID
+                              FROM DTAP_XYHF_DATAPARAMETER XYHF2
+                             WHERE XYHF2.DATA_PERIOD = (TO_DATE(%(data_period)s,
+                                                                'yyyy-mm-dd hh24:mi:ss') -
+                                   1 * (%(days)s))
+                               AND XYHF2.ID = XYHF1.ID
+                               AND XYHF2.TIME_LEVEL = '2'
+                               AND XYHF2.BIZ_LEVEL = '1')
+                       AND XYHF1.TIME_LEVEL = '2'
+                       AND XYHF1.BIZ_LEVEL = '1'
+                       AND XYHF1.DATA_PERIOD =
+                           TO_DATE(%(data_period)s, 'yyyy-mm-dd hh24:mi:ss')) TMP1
+            ON DAY_BUSINESS.ID = TMP1.BUSINESS_ID
+          LEFT JOIN (SELECT ID AS BUSINESS_ID
+                      FROM ((SELECT DISTINCT ID
+                               FROM DTAP_XYHF_DATAPARAMETER DEAL
+                              WHERE DEAL.DATA_PERIOD = (TO_DATE(%(data_period)s,
+                                                                'yyyy-mm-dd hh24:mi:ss') -
+                                    2 * (%(days)s))
+                                AND DEAL.TIME_LEVEL = '2'
+                                AND DEAL.BIZ_LEVEL = '1') UNION ALL
+                            (SELECT DISTINCT ID
+                               FROM DTAP_XYHF_DATAPARAMETER DEAL
+                              WHERE DEAL.DATA_PERIOD = (TO_DATE(%(data_period)s,
+                                                                'yyyy-mm-dd hh24:mi:ss') -
+                                    1 * (%(days)s))
+                                AND DEAL.TIME_LEVEL = '2'
+                                AND DEAL.BIZ_LEVEL = '1') UNION ALL
+                            (SELECT DISTINCT ID
+                               FROM DTAP_XYHF_DATAPARAMETER DEAL
+                              WHERE DEAL.DATA_PERIOD =
+                                    (TO_DATE(%(data_period)s,
+                                             'yyyy-mm-dd hh24:mi:ss'))
+                                AND DEAL.TIME_LEVEL = '2'
+                                AND DEAL.BIZ_LEVEL = '1')) DEAL3
+                     GROUP BY ID
+                    HAVING COUNT(ID) >= 3) TMP2
+            ON DAY_BUSINESS.ID = TMP2.BUSINESS_ID
+          LEFT JOIN (SELECT DEAL2.ID AS BUSINESS_ID
+                      FROM (SELECT ID, SUM(TXNS) AS TXNS, SUM(AMTS) AS AMTS
+                              FROM DTAP_XYHF_DATAPARAMETER
+                             WHERE DATA_PERIOD = (TO_DATE(%(data_period)s,
+                                                          'yyyy-mm-dd hh24:mi:ss') -
+                                   1 * (1))
+                               AND TIME_LEVEL = '2'
+                               AND BIZ_LEVEL = '1'
+                             GROUP BY ID) DEAL2
+                     RIGHT JOIN (SELECT ID,
+                                       SUM(TXNS) AS TXNS,
+                                       SUM(AMTS) AS AMTS
+                                  FROM DTAP_XYHF_DATAPARAMETER
+                                 WHERE DATA_PERIOD =
+                                       TO_DATE(%(data_period)s,
+                                               'yyyy-mm-dd hh24:mi:ss')
+                                   AND TIME_LEVEL = '2'
+                                   AND BIZ_LEVEL = '1'
+                                 GROUP BY ID) XYHF3
+                        ON XYHF3.ID = DEAL2.ID
+                     WHERE DEAL2.TXNS > 0
+                       AND DEAL2.AMTS > 0
+                       AND XYHF3.TXNS::NUMERIC / DEAL2.TXNS::NUMERIC < 0.5
+                       AND XYHF3.AMTS / DEAL2.AMTS < 0.5) TMP3
+            ON DAY_BUSINESS.ID = TMP3.BUSINESS_ID
+          LEFT JOIN XYHF_MIR_COOLBUSINESS BUSINESS
+            ON DAY_BUSINESS.ID = TO_CHAR(BUSINESS.BUSINESS_ID,'fm9999999999')
+          LEFT JOIN XYHF_MIR_COOLAGENT AGENTS
+            ON BUSINESS.AGENT_ID = TO_CHAR(AGENTS.AGENT_ID,'fm9999999999')
+         GROUP BY AGENTS.AGENT_ID) COUNTMESSAGE
+ RIGHT JOIN (SELECT BUS2.AGENT_ID,
+                    NVL(CLIENTS, 0::BIGINT) AS CLIENTS,
+                    NVL(NEW_CLIENTS, 0::BIGINT) AS NEW_CLIENTS
+               FROM (SELECT COUNT(BUSINESS_ID) AS CLIENTS, AGENT_ID
+                       FROM XYHF_MIR_COOLBUSINESS BUSINESS
+                      WHERE TO_DATE(coalesce(nullif(BUSINESS.REGTIME,''),null), 'yyyy-mm-dd hh24:mi:ss') <
+                            TO_DATE(%(dae_min)s, 'yyyy-mm-dd hh24:mi:ss')
+                        AND STATUS IN (3, 4)
+                        AND BUSINESS.IS_STATUS='1'
+                      GROUP BY AGENT_ID) BUS2
+               LEFT JOIN (SELECT COUNT(BUSINESS_ID) AS NEW_CLIENTS, AGENT_ID
+                           FROM XYHF_MIR_COOLBUSINESS BUSINESS
+                          WHERE TO_DATE(BUSINESS.REGTIME,
+                                        'yyyy-mm-dd hh24:mi:ss') >=
+                                TO_DATE(%(data_period)s,
+                                        'yyyy-mm-dd hh24:mi:ss')
+                            AND TO_DATE(coalesce(nullif(BUSINESS.REGTIME,''),null),
+                                        'yyyy-mm-dd hh24:mi:ss') <
+                                TO_DATE(%(dae_min)s, 'yyyy-mm-dd hh24:mi:ss')
+                            AND STATUS IN (3, 4)
+                            AND BUSINESS.IS_STATUS='1'
+                            AND NOT EXISTS
+                          (SELECT *
+                                   FROM XYHF_MIR_COOLBUSINESS BUSINESS2
+                                  WHERE TO_DATE(coalesce(nullif(REGTIME,''),null),
+                                                'yyyy-mm-dd hh24:mi:ss') <
+                                        TO_DATE(%(data_period)s,
+                                                'yyyy-mm-dd hh24:mi:ss')
+                                    AND BUSINESS.BUSINESS_ID =
+                                        BUSINESS2.BUSINESS_ID)
+                          GROUP BY AGENT_ID) BUS
+                 ON BUS.AGENT_ID = BUS2.AGENT_ID) ADDMESSAGE
+    ON TO_CHAR(COUNTMESSAGE.ID,'fm9999999999') = ADDMESSAGE.AGENT_ID
+  LEFT JOIN XYHF_MIR_COOLAGENT AGENTNAME
+    ON TO_CHAR(AGENTNAME.AGENT_ID,'fm9999999999') = ADDMESSAGE.AGENT_ID;
+	
+
+	
+	
+	
+	
